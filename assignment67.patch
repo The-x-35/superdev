@@ -1,0 +1,368 @@
+Only in week-1-basic-borsh: .DS_Store
+diff -r assignment67/app/src/main.rs week-1-basic-borsh/app/src/main.rs
+0a1
+> use std::fmt::Error;
+6,8c7
+<     name: String,
+<     qty_2: usize,
+<     qty_3: i8
+---
+>     qty_1: i32    
+12,17c11,13
+<     println!("Testing custom derive macro with String support:");
+<     
+<     let s1 = Swap {
+<         name: "Hello".to_string(),
+<         qty_2: 2,
+<         qty_3: 100
+---
+>     println!("Hello, world!");
+>     let s = Swap {
+>         qty_1: 1,
+19,66c15,16
+<     let bytes1 = s1.serialize();
+<     println!("Test 1 - Simple string:");
+<     println!("  Original: name='{}', qty_2={}, qty_3={}", s1.name, s1.qty_2, s1.qty_3);
+<     println!("  Serialized bytes: {:?}", bytes1);
+<     
+<     match Swap::deserialize(&bytes1) {
+<         Ok(deserialized) => {
+<             println!("  Deserialized: name='{}', qty_2={}, qty_3={}", 
+<                 deserialized.name, deserialized.qty_2, deserialized.qty_3);
+<         }
+<         Err(e) => println!("  Deserialization failed: {:?}", e),
+<     }
+<     
+<     let s2 = Swap {
+<         name: "".to_string(),
+<         qty_2: 0,
+<         qty_3: 0
+<     };
+<     let bytes2 = s2.serialize();
+<     println!("\nTest 2 - Empty string:");
+<     println!("  Original: name='{}', qty_2={}, qty_3={}", s2.name, s2.qty_2, s2.qty_3);
+<     println!("  Serialized bytes: {:?}", bytes2);
+<     
+<     match Swap::deserialize(&bytes2) {
+<         Ok(deserialized) => {
+<             println!("  Deserialized: name='{}', qty_2={}, qty_3={}", 
+<                 deserialized.name, deserialized.qty_2, deserialized.qty_3);
+<         }
+<         Err(e) => println!("  Deserialization failed: {:?}", e),
+<     }
+<     
+<     let s3 = Swap {
+<         name: "Hello, World! 🌍 你好 こんにちは".to_string(),
+<         qty_2: 42,
+<         qty_3: -50
+<     };
+<     let bytes3 = s3.serialize();
+<     println!("\nTest 3 - Long string with Unicode:");
+<     println!("  Original: name='{}', qty_2={}, qty_3={}", s3.name, s3.qty_2, s3.qty_3);
+<     println!("  Serialized bytes: {:?}", bytes3);
+<     
+<     match Swap::deserialize(&bytes3) {
+<         Ok(deserialized) => {
+<             println!("  Deserialized: name='{}', qty_2={}, qty_3={}", 
+<                 deserialized.name, deserialized.qty_2, deserialized.qty_3);
+<         }
+<         Err(e) => println!("  Deserialization failed: {:?}", e),
+<     }
+---
+>     let bytes = s.serialize();
+>     println!("{:?}", bytes);
+diff -r assignment67/serialize_macro/src/lib.rs week-1-basic-borsh/serialize_macro/src/lib.rs
+3c3
+< use syn::{DeriveInput, Data, Fields, Type};
+---
+> use syn::{DeriveInput, Data, Fields};
+16,45c16,18
+<                         let field_type = &field.ty;
+<                         
+<                         let serialization = match field_type {
+<                             Type::Path(type_path) => {
+<                                 let type_name = &type_path.path.segments.last().unwrap().ident;
+<                                 match type_name.to_string().as_str() {
+<                                     "i8" => quote! { result.extend_from_slice(&self.#field_name.to_be_bytes()); },
+<                                     "i16" => quote! { result.extend_from_slice(&self.#field_name.to_be_bytes()); },
+<                                     "i32" => quote! { result.extend_from_slice(&self.#field_name.to_be_bytes()); },
+<                                     "i64" => quote! { result.extend_from_slice(&self.#field_name.to_be_bytes()); },
+<                                     "i128" => quote! { result.extend_from_slice(&self.#field_name.to_be_bytes()); },
+<                                     "u8" => quote! { result.extend_from_slice(&self.#field_name.to_be_bytes()); },
+<                                     "u16" => quote! { result.extend_from_slice(&self.#field_name.to_be_bytes()); },
+<                                     "u32" => quote! { result.extend_from_slice(&self.#field_name.to_be_bytes()); },
+<                                     "u64" => quote! { result.extend_from_slice(&self.#field_name.to_be_bytes()); },
+<                                     "u128" => quote! { result.extend_from_slice(&self.#field_name.to_be_bytes()); },
+<                                     "usize" => quote! { result.extend_from_slice(&(self.#field_name as u64).to_be_bytes()); },
+<                                     "isize" => quote! { result.extend_from_slice(&(self.#field_name as i64).to_be_bytes()); },
+<                                     "String" => quote! { 
+<                                         let bytes = self.#field_name.as_bytes();
+<                                         result.extend_from_slice(&(bytes.len() as u32).to_be_bytes());
+<                                         result.extend_from_slice(bytes);
+<                                     },
+<                                     _ => panic!("Unsupported number type: {}", type_name),
+<                                 }
+<                             }
+<                             _ => panic!("Unsupported field type"),
+<                         };
+<                         
+<                         serialization
+---
+>                         quote! {
+>                             result.extend_from_slice(&self.#field_name.to_be_bytes());
+>                         }
+46a20,22
+>                     /*
+>                         field_serializeations = [quote!(result.extend_from_slice(&self.qty_1.to_be_bytes())), quote!(result.extend_from_slice(&self.qty_2.to_be_bytes()))]
+>                      */
+55a32,37
+>     /*
+>         serialize_fields ->
+>         result.extend_from_slice(&self.qty_1.to_be_bytes())
+>         result.extend_from_slice(&self.qty_2.to_be_bytes())
+>         result.extend_from_slice(&self.qty_3.to_be_bytes())
+>      */
+58c40
+<         impl serialize_macro_traits::Serialize for #name {
+---
+>         impl Serialize for #name {
+74c56
+<     let (deserialize_fields, field_assignments) = match &ast.data {
+---
+>     let (deserialize_fields, field_assignments, total_size) = match &ast.data {
+77a60
+>                     let mut offset: usize = 0;
+83c66,68
+<                         let field_type = &field.ty;
+---
+>                         let field_size = 4;
+>                         let start_offset = offset;
+>                         let end_offset = offset + field_size;
+85,258c70,77
+<                         let deserialization = match field_type {
+<                             Type::Path(type_path) => {
+<                                 let type_name = &type_path.path.segments.last().unwrap().ident;
+<                                 match type_name.to_string().as_str() {
+<                                     "i8" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 1 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let bytes: [u8; 1] = base[offset..offset + 1]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             offset += 1;
+<                                             i8::from_be_bytes(bytes)
+<                                         };
+<                                     },
+<                                     "i16" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 2 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let bytes: [u8; 2] = base[offset..offset + 2]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             offset += 2;
+<                                             i16::from_be_bytes(bytes)
+<                                         };
+<                                     },
+<                                     "i32" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 4 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let bytes: [u8; 4] = base[offset..offset + 4]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             offset += 4;
+<                                             i32::from_be_bytes(bytes)
+<                                         };
+<                                     },
+<                                     "i64" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 8 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let bytes: [u8; 8] = base[offset..offset + 8]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             offset += 8;
+<                                             i64::from_be_bytes(bytes)
+<                                         };
+<                                     },
+<                                     "i128" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 16 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let bytes: [u8; 16] = base[offset..offset + 16]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             offset += 16;
+<                                             i128::from_be_bytes(bytes)
+<                                         };
+<                                     },
+<                                     "u8" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 1 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let bytes: [u8; 1] = base[offset..offset + 1]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             offset += 1;
+<                                             u8::from_be_bytes(bytes)
+<                                         };
+<                                     },
+<                                     "u16" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 2 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let bytes: [u8; 2] = base[offset..offset + 2]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             offset += 2;
+<                                             u16::from_be_bytes(bytes)
+<                                         };
+<                                     },
+<                                     "u32" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 4 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let bytes: [u8; 4] = base[offset..offset + 4]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             offset += 4;
+<                                             u32::from_be_bytes(bytes)
+<                                         };
+<                                     },
+<                                     "u64" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 8 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let bytes: [u8; 8] = base[offset..offset + 8]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             offset += 8;
+<                                             u64::from_be_bytes(bytes)
+<                                         };
+<                                     },
+<                                     "u128" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 16 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let bytes: [u8; 16] = base[offset..offset + 16]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             offset += 16;
+<                                             u128::from_be_bytes(bytes)
+<                                         };
+<                                     },
+<                                     "usize" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 8 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let bytes: [u8; 8] = base[offset..offset + 8]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             offset += 8;
+<                                             u64::from_be_bytes(bytes) as usize
+<                                         };
+<                                     },
+<                                     "isize" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 8 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let bytes: [u8; 8] = base[offset..offset + 8]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             offset += 8;
+<                                             i64::from_be_bytes(bytes) as isize
+<                                         };
+<                                     },
+<                                     "String" => quote! {
+<                                         let #field_name = {
+<                                             if offset + 4 > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             let length_bytes: [u8; 4] = base[offset..offset + 4]
+<                                                 .try_into()
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?;
+<                                             let length = u32::from_be_bytes(length_bytes) as usize;
+<                                             offset += 4;
+<                                             
+<                                             if offset + length > base.len() {
+<                                                 return Err(serialize_macro_traits::SerializeError);
+<                                             }
+<                                             
+<                                             let string_bytes = &base[offset..offset + length];
+<                                             offset += length;
+<                                             String::from_utf8(string_bytes.to_vec())
+<                                                 .map_err(|_| serialize_macro_traits::SerializeError)?
+<                                         };
+<                                     },
+<                                     _ => panic!("Unsupported number type: {}", type_name),
+<                                 }
+<                             }
+<                             _ => panic!("Unsupported field type"),
+<                         };
+---
+>                         field_deserializations.push(quote! {
+>                             let #field_name = {
+>                                 let bytes: [u8; 4] = base[#start_offset..#end_offset]
+>                                     .try_into()
+>                                     .map_err(|_| Error)?;
+>                                 i32::from_be_bytes(bytes)
+>                             };
+>                         });
+260,261c79,83
+<                         field_deserializations.push(deserialization);
+<                         field_assignments.push(quote! { #field_name });
+---
+>                         field_assignments.push(quote! {
+>                             #field_name
+>                         });
+>                         
+>                         offset += field_size;
+264c86
+<                     (field_deserializations, field_assignments)
+---
+>                     (field_deserializations, field_assignments, offset)
+273,275c95,99
+<         impl serialize_macro_traits::Deserialize for #name {
+<             fn deserialize(base: &[u8]) -> Result<Self, serialize_macro_traits::SerializeError> {
+<                 let mut offset = 0;
+---
+>         impl Deserialize for #name {
+>             fn deserialize(base: &[u8]) -> Result<Self, Error> {
+>                 if base.len() < #total_size {
+>                     return Err(Error);
+>                 }
+diff -r assignment67/serialize_macro_traits/src/lib.rs week-1-basic-borsh/serialize_macro_traits/src/lib.rs
+1,13c1
+< use std::fmt;
+< 
+< #[derive(Debug)]
+< pub struct SerializeError;
+< 
+< impl fmt::Display for SerializeError {
+<     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+<         write!(f, "Serialization error")
+<     }
+< }
+< 
+< impl std::error::Error for SerializeError {}
+< 
+---
+> use std::fmt::Error;
+19c7
+< 	fn deserialize(base: &[u8]) -> Result<Self, SerializeError>;
+---
+> 	fn deserialize(base: &[u8]) -> Result<Self, Error>;

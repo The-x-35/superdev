@@ -1,0 +1,66 @@
+--- week1/assignment2345/anchor/lang/syn/src/parser/accounts/1.rs	2025-07-20 23:26:21
++++ week1/assignment2345/anchor/lang/syn/src/parser/accounts/constraints.rs	2025-07-18 16:04:48
+@@ -1,6 +1,8 @@
+ use crate::*;
+ use syn::parse::{Error as ParseError, Result as ParseResult};
+-use syn::{bracketed, Token};
++use syn::{bracketed, Token, parenthesized, braced};
++use syn::punctuated::Punctuated;
++use syn::token::{Bracket, Paren, Brace};
+ 
+ pub fn parse(f: &syn::Field, f_ty: Option<&Ty>) -> ParseResult<ConstraintGroup> {
+     let mut constraints = ConstraintGroupBuilder::new(f_ty);
+@@ -364,12 +366,41 @@
+                     .span()
+                     .join(stream.span())
+                     .unwrap_or_else(|| ident.span());
+-                let seeds;
+-                let bracket = bracketed!(seeds in stream);
+-                ConstraintToken::Seeds(Context::new(
+-                    span.join(bracket.span).unwrap_or(span),
++                
++                // Try to parse as bracketed expression first, fallback to arbitrary expression
++                let (seeds, final_span) = if stream.peek(Bracket) || stream.peek(syn::token::Paren) || stream.peek(syn::token::Brace) {
++                    // Support for [], (), and {} brackets
++                    if stream.peek(Bracket) {
++                        // Square brackets: [expr1, expr2]
++                        let seeds;
++                        let bracket = bracketed!(seeds in stream);
++                        let parsed_seeds = seeds.parse_terminated(Expr::parse)?;
++                        (parsed_seeds, span.join(bracket.span).unwrap_or(span))
++                    } else if stream.peek(syn::token::Paren) {
++                        // Parentheses: (expr1, expr2)
++                        let seeds;
++                        let paren = syn::parenthesized!(seeds in stream);
++                        let parsed_seeds = seeds.parse_terminated(Expr::parse)?;
++                        (parsed_seeds, span.join(paren.span).unwrap_or(span))
++                    } else {
++                        // Curly braces: {expr1, expr2}
++                        let seeds;
++                        let brace = syn::braced!(seeds in stream);
++                        let parsed_seeds = seeds.parse_terminated(Expr::parse)?;
++                        (parsed_seeds, span.join(brace.span).unwrap_or(span))
++                    }
++                } else {
++                    // New behavior: parse arbitrary expression
++                    let expr = stream.parse::<Expr>()?;
++                    let mut seeds = Punctuated::new();
++                    seeds.push_value(expr);
++                    (seeds, span)
++                };
++                
++                ConstraintToken::Seeds(Context::new(
++                    final_span,
+                     ConstraintSeeds {
+-                        seeds: seeds.parse_terminated(Expr::parse)?,
++                        seeds,
+                     },
+                 ))
+             }
+@@ -1675,4 +1706,4 @@
+         self.extension_permanent_delegate.replace(c);
+         Ok(())
+     }
+-}
+\ No newline at end of file
++}
